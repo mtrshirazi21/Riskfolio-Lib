@@ -688,7 +688,7 @@ def assets_clusters(
         Assets returns.
     codependence : str, can be {'pearson', 'spearman', 'abs_pearson', 'abs_spearman', 'distance', 'mutual_info' or 'tail'}
         The codependence or similarity matrix used to build the distance
-        metric and clusters. The default is 'pearson'. Posible values are:
+        metric and clusters. The default is 'pearson'. Possible values are:
 
         - 'pearson': pearson correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{0.5(1-\rho^{pearson}_{i,j})}`.
         - 'spearman': spearman correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{0.5(1-\rho^{spearman}_{i,j})}`.
@@ -700,7 +700,7 @@ def assets_clusters(
 
     linkage : string, optional
         Linkage method of hierarchical clustering, see `linkage <https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html?highlight=linkage#scipy.cluster.hierarchy.linkage>`_ for more details.
-        The default is 'ward'. Posible values are:
+        The default is 'ward'. Possible values are:
 
         - 'single'.
         - 'complete'.
@@ -720,7 +720,7 @@ def assets_clusters(
         to find the optimal number of clusters. The default is 10.
     bins_info: int or str
         Number of bins used to calculate variation of information. The default
-        value is 'KN'. Posible values are:
+        value is 'KN'. Possible values are:
 
         - 'KN': Knuth's choice method. See more in `knuth_bin_width <https://docs.astropy.org/en/stable/api/astropy.stats.knuth_bin_width.html>`_.
         - 'FD': Freedman–Diaconis' choice method. See more in `freedman_bin_width <https://docs.astropy.org/en/stable/api/astropy.stats.freedman_bin_width.html>`_.
@@ -779,12 +779,12 @@ def assets_clusters(
         codep = af.ltdi_matrix(returns, alpha_tail).astype(float)
         dist = -np.log(codep)
 
-    # Hierarchcial clustering
+    # Hierarchical clustering
     dist = dist.to_numpy()
     dist = pd.DataFrame(dist, columns=codep.columns, index=codep.index)
     if linkage == "DBHT":
         # different choices for D, S give different outputs!
-        D = dist.to_numpy()  # dissimilatity matrix
+        D = dist.to_numpy()  # dissimilarity matrix
         if codependence in {"pearson", "spearman"}:
             S = (1 - dist**2).to_numpy()
         else:
@@ -902,7 +902,7 @@ def hrp_constraints(constraints, asset_classes):
         raise ValueError("constraints and asset_classes must be DataFrames")
 
     if constraints.shape[1] != 6:
-        raise ValueError("constraints must have ten columns")
+        raise ValueError("constraints must have six columns")
 
     n = len(constraints)
     data = constraints.fillna("").copy()

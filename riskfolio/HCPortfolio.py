@@ -15,6 +15,7 @@ import riskfolio.RiskFunctions as rk
 import riskfolio.AuxFunctions as af
 import riskfolio.ParamsEstimation as pe
 import riskfolio.DBHT as db
+import riskfolio.GerberStatistic as gs
 
 
 class HCPortfolio(object):
@@ -42,6 +43,19 @@ class HCPortfolio(object):
         Upper bound constraint for hierarchical risk parity weights :cite:`c-Pfitzinger`.
     w_min : Series, optional
         Lower bound constraint for hierarchical risk parity weights :cite:`c-Pfitzinger`.
+    alpha_tail : float, optional
+        Significance level for lower tail dependence index. The default is 0.05.
+    gs_threshold : float, optional
+        Gerber statistic threshold. The default is 0.5.
+    bins_info: int or str
+        Number of bins used to calculate variation of information. The default
+        value is 'KN'. Possible values are:
+
+        - 'KN': Knuth's choice method. See more in `knuth_bin_width <https://docs.astropy.org/en/stable/api/astropy.stats.knuth_bin_width.html>`_.
+        - 'FD': Freedman–Diaconis' choice method. See more in `freedman_bin_width <https://docs.astropy.org/en/stable/api/astropy.stats.freedman_bin_width.html>`_.
+        - 'SC': Scotts' choice method. See more in `scott_bin_width <https://docs.astropy.org/en/stable/api/astropy.stats.scott_bin_width.html>`_.
+        - 'HGR': Hacine-Gharbi and Ravier' choice method.
+        - int: integer value choice by user.
     """
 
     def __init__(
@@ -54,7 +68,8 @@ class HCPortfolio(object):
         w_max=None,
         w_min=None,
         alpha_tail=0.05,
-        bins_info=None,
+        gs_threshold=0.5,
+        bins_info="KN",
     ):
         self._returns = returns
         self.alpha = alpha
@@ -62,6 +77,7 @@ class HCPortfolio(object):
         self.beta = beta
         self.b_sim = b_sim
         self.alpha_tail = alpha_tail
+        self.gs_threshold = gs_threshold
         self.bins_info = bins_info
         self.asset_order = None
         self.clusters = None
@@ -178,22 +194,36 @@ class HCPortfolio(object):
     ):
 
         # Calculating distance
-        if codependence in {"pearson", "spearman", "custom_cov"}:
+        if codependence in {
+            "pearson",
+            "spearman",
+            "kendall",
+            "gerber1",
+            "gerber2",
+            "custom_cov",
+        }:
             dist = np.sqrt(np.clip((1 - self.codep) / 2, a_min=0.0, a_max=1.0))
-        elif codependence in {"abs_pearson", "abs_spearman", "distance"}:
+        elif codependence in {"abs_pearson", "abs_spearman", "abs_kendall", "distance"}:
             dist = np.sqrt(np.clip((1 - self.codep), a_min=0.0, a_max=1.0))
         elif codependence in {"mutual_info"}:
             dist = af.var_info_matrix(self.returns, self.bins_info).astype(float)
         elif codependence in {"tail"}:
             dist = -np.log(self.codep).astype(float)
 
-        # Hierarchcial clustering
+        # Hierarchical clustering
         dist = dist.to_numpy()
         dist = pd.DataFrame(dist, columns=self.codep.columns, index=self.codep.index)
         if linkage == "DBHT":
             # different choices for D, S give different outputs!
-            D = dist.to_numpy()  # dissimilatity matrix
-            if codependence in {"pearson", "spearman", "custom_cov"}:
+            D = dist.to_numpy()  # dissimilarity matrix
+            if codependence in {
+                "pearson",
+                "spearman",
+                "kendall",
+                "gerber1",
+                "gerber2",
+                "custom_cov",
+            }:
                 codep = 1 - dist**2
                 S = codep.to_numpy()  # similarity matrix
             else:
@@ -221,7 +251,7 @@ class HCPortfolio(object):
     def _recursive_bisection(self, sort_order, rm="MV", rf=0):
 
         if isinstance(self.w_max, pd.Series) and isinstance(self.w_min, pd.Series):
-            if (self.w_max.all() >= self.w_min.all()).item():
+            if (self.w_max >= self.w_min).all().item():
                 flag = True
             else:
                 raise NameError("All upper bounds must be higher than lower bounds")
@@ -549,6 +579,7 @@ class HCPortfolio(object):
         max_k=10,
         bins_info="KN",
         alpha_tail=0.05,
+        gs_threshold=0.5,
         leaf_order=True,
         d=0.94,
         **kwargs,
@@ -561,7 +592,7 @@ class HCPortfolio(object):
         ----------
         model : str, can be {'HRP', 'HERC' or 'HERC2'}
             The hierarchical cluster portfolio model used for optimize the
-            portfolio. The default is 'HRP'. Posible values are:
+            portfolio. The default is 'HRP'. Possible values are:
 
             - 'HRP': Hierarchical Risk Parity.
             - 'HERC': Hierarchical Equal Risk Contribution.
@@ -570,12 +601,16 @@ class HCPortfolio(object):
 
         codependence : str, optional
             The codependence or similarity matrix used to build the distance
-            metric and clusters. The default is 'pearson'. Posible values are:
+            metric and clusters. The default is 'pearson'. Possible values are:
 
             - 'pearson': pearson correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{0.5(1-\rho^{pearson}_{i,j})}`.
             - 'spearman': spearman correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{0.5(1-\rho^{spearman}_{i,j})}`.
+            - 'kendall': kendall correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{0.5(1-\rho^{kendall}_{i,j})}`.
+            - 'gerber1': Gerber statistic 1 correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{0.5(1-\rho^{gerber1}_{i,j})}`.
+            - 'gerber2': Gerber statistic 2 correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{0.5(1-\rho^{gerber2}_{i,j})}`.
             - 'abs_pearson': absolute value pearson correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{(1-|\rho^{pearson}_{i,j}|)}`.
             - 'abs_spearman': absolute value spearman correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{(1-|\rho^{spearman}_{i,j}|)}`.
+            - 'abs_kendall': absolute value kendall correlation matrix. Distance formula: :math:`D_{i,j} = \sqrt{(1-|\rho^{kendall}_{i,j}|)}`.
             - 'distance': distance correlation matrix. Distance formula :math:`D_{i,j} = \sqrt{(1-\rho^{distance}_{i,j})}`.
             - 'mutual_info': mutual information matrix. Distance used is variation information matrix.
             - 'tail': lower tail dependence index matrix. Dissimilarity formula :math:`D_{i,j} = -\log{\lambda_{i,j}}`.
@@ -583,7 +618,7 @@ class HCPortfolio(object):
 
         covariance : str, optional
             The method used to estimate the covariance matrix:
-            The default is 'hist'. Posible values are:
+            The default is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1': use ewma with adjust=True. For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
@@ -596,11 +631,13 @@ class HCPortfolio(object):
             - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`c-MLforAM`.
             - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`c-MLforAM`.
             - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`c-MLforAM`.
+            - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`c-Gerber2021`.
+            - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`c-Gerber2021`.
             - 'custom_cov': use custom covariance matrix.
 
         obj : str can be {'MinRisk', 'Utility', 'Sharpe' or 'ERC'}.
             Objective function used by the NCO model.
-            The default is 'MinRisk'. Posible values are:
+            The default is 'MinRisk'. Possible values are:
 
             - 'MinRisk': Minimize the selected risk measure.
             - 'Utility': Maximize the Utility function :math:`\mu w - l \phi_{i}(w)`.
@@ -608,9 +645,9 @@ class HCPortfolio(object):
             - 'ERC': Equally risk contribution portfolio of the selected risk measure.
 
         rm : str, optional
-            The risk measure used to optimze the portfolio. If model is 'NCO',
-            the risk measures available depends on the objective functon.
-            The default is 'MV'. Posible values are:
+            The risk measure used to optimize the portfolio. If model is 'NCO',
+            the risk measures available depends on the objective function.
+            The default is 'MV'. Possible values are:
 
             - 'equal': Equally weighted.
             - 'vol': Standard Deviation.
@@ -654,7 +691,7 @@ class HCPortfolio(object):
             The default is None.
         linkage : string, optional
             Linkage method of hierarchical clustering. For more information see `linkage <https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html>`_.
-            The default is 'single'. Posible values are:
+            The default is 'single'. Possible values are:
 
             - 'single'.
             - 'complete'.
@@ -674,7 +711,7 @@ class HCPortfolio(object):
             to find the optimal number of clusters. The default is 10.
         bins_info: int or str
             Number of bins used to calculate variation of information. The default
-            value is 'KN'. Posible values are:
+            value is 'KN'. Possible values are:
 
             - 'KN': Knuth's choice method. See more in `knuth_bin_width <https://docs.astropy.org/en/stable/api/astropy.stats.knuth_bin_width.html>`_.
             - 'FD': Freedman–Diaconis' choice method. See more in `freedman_bin_width <https://docs.astropy.org/en/stable/api/astropy.stats.freedman_bin_width.html>`_.
@@ -684,6 +721,8 @@ class HCPortfolio(object):
 
         alpha_tail : float, optional
             Significance level for lower tail dependence index. The default is 0.05.
+        gs_threshold : float, optional
+            Gerber statistic threshold. The default is 0.5.
         leaf_order : bool, optional
             Indicates if the cluster are ordered so that the distance between
             successive leaves is minimal. The default is True.
@@ -726,11 +765,18 @@ class HCPortfolio(object):
 
         self.alpha_tail = alpha_tail
         self.bins_info = bins_info
+        self.gs_threshold = gs_threshold
 
         # Codependence matrix
-        if codependence in {"pearson", "spearman"}:
+        if codependence in {"pearson", "spearman", "kendall"}:
             self.codep = self.returns.corr(method=codependence).astype(float)
-        elif codependence in {"abs_pearson", "abs_spearman"}:
+        elif codependence == "gerber1":
+            self.codep = gs.gerber_cov_stat1(self.returns, threshold=self.gs_threshold)
+            self.codep = af.cov2corr(self.codep).astype(float)
+        elif codependence == "gerber2":
+            self.codep = gs.gerber_cov_stat2(self.returns, threshold=self.gs_threshold)
+            self.codep = af.cov2corr(self.codep).astype(float)
+        elif codependence in {"abs_pearson", "abs_spearman", "abs_kendall"}:
             self.codep = np.abs(self.returns.corr(method=codependence[4:])).astype(
                 float
             )
@@ -791,7 +837,7 @@ class HCPortfolio(object):
             self.w_max = self.w_max.sort_index()
             self.w_max.index = self.assetslist
             self.w_min = self.w_min.sort_index()
-            self.w_max.index = self.assetslist
+            self.w_min.index = self.assetslist
 
         weights = weights.loc[self.assetslist].to_frame()
         weights.columns = ["weights"]

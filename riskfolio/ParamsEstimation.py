@@ -10,12 +10,13 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 import sklearn.covariance as skcov
+import arch.bootstrap as bs
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from numpy.linalg import inv
 import riskfolio.AuxFunctions as af
-import arch.bootstrap as bs
 import riskfolio.DBHT as db
+import riskfolio.GerberStatistic as gs
 
 
 def mean_vector(X, method="hist", d=0.94):
@@ -27,9 +28,9 @@ def mean_vector(X, method="hist", d=0.94):
     X : DataFrame of shape (n_samples, n_features)
         Features matrix, where n_samples is the number of samples and
         n_features is the number of features.
-    method : str, optinal
+    method : str, optional
         The method used to estimate the expected returns.
-        The default value is 'hist'. Posible values are:
+        The default value is 'hist'. Possible values are:
 
         - 'hist': use historical estimates.
         - 'ewma1': use ewma with adjust=True. For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
@@ -78,7 +79,7 @@ def covar_matrix(X, method="hist", d=0.94, **kwargs):
         n_features is the number of features.
     method : str, optional
         The method used to estimate the covariance matrix:
-        The default is 'hist'. Posible values are:
+        The default is 'hist'. Possible values are:
 
         - 'hist': use historical estimates.
         - 'ewma1': use ewma with adjust=True. For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
@@ -91,6 +92,8 @@ def covar_matrix(X, method="hist", d=0.94, **kwargs):
         - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`b-MLforAM`.
         - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`b-MLforAM`.
         - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`b-MLforAM`.
+        - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`b-Gerber2021`.
+        - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`b-Gerber2021`.
     d : scalar
         The smoothing factor of ewma methods.
         The default is 0.94.
@@ -154,6 +157,10 @@ def covar_matrix(X, method="hist", d=0.94, **kwargs):
         T, N = X.shape
         q = T / N
         cov = af.denoiseCov(cov, q, kind=method, **kwargs)
+    elif method == "gerber1":
+        cov = gs.gerber_cov_stat1(X, **kwargs)
+    elif method == "gerber2":
+        cov = gs.gerber_cov_stat2(X, **kwargs)
 
     cov = pd.DataFrame(np.array(cov, ndmin=2), columns=assets, index=assets)
 
@@ -174,7 +181,7 @@ def forward_regression(X, y, criterion="pvalue", threshold=0.05, verbose=False):
     y : Series of shape (n_samples, 1)
         Target vector, where n_samples in the number of samples.
     criterion : str, optional
-        The default is 'pvalue'. Posible values of the criterion used to select
+        The default is 'pvalue'. Possible values of the criterion used to select
         the best features are:
 
         - 'pvalue': select the features based on p-values.
@@ -348,7 +355,7 @@ def backward_regression(X, y, criterion="pvalue", threshold=0.05, verbose=False)
     y : Series of shape (n_samples, 1)
         Target vector, where n_samples in the number of samples.
     criterion : str, optional
-        The default is 'pvalue'. Posible values of the criterion used to select
+        The default is 'pvalue'. Possible values of the criterion used to select
         the best features are:
 
         - 'pvalue': select the features based on p-values.
@@ -502,7 +509,7 @@ def backward_regression(X, y, criterion="pvalue", threshold=0.05, verbose=False)
 
 def PCR(X, y, n_components=0.95):
     r"""
-    Estimate the coeficients using Principal Components Regression (PCR).
+    Estimate the coefficients using Principal Components Regression (PCR).
 
     Parameters
     ----------
@@ -514,7 +521,7 @@ def PCR(X, y, n_components=0.95):
     n_components : int, float, None or str, optional
         if 1 < n_components (int), it represents the number of components that
         will be keep. if 0 < n_components < 1 (float), it represents the
-        percentage of variance that the is explained by the components keeped.
+        percentage of variance that the is explained by the components kept.
         See `PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_
         for more details. The default is 0.95.
 
@@ -593,7 +600,7 @@ def loadings_matrix(
         Indicate the method used for stepwise regression.
         The default is 'Forward'.
     criterion : str, optional
-        The default is 'pvalue'. Posible values of the criterion used to select
+        The default is 'pvalue'. Possible values of the criterion used to select
         the best features are:
 
         - 'pvalue': select the features based on p-values.
@@ -607,7 +614,7 @@ def loadings_matrix(
     n_components : int, float, None or str, optional
         if 1 < n_components (int), it represents the number of components that
         will be keep. if 0 < n_components < 1 (float), it represents the
-        percentage of variance that the is explained by the components keeped.
+        percentage of variance that the is explained by the components kept.
         See `PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_
         for more details. The default is 0.95.
     verbose : bool, optional
@@ -647,7 +654,7 @@ def loadings_matrix(
                     X, Y[i], criterion=criterion, threshold=threshold, verbose=verbose
                 )
             else:
-                raise ValueError("Choose and adecuate stepwise method")
+                raise ValueError("Choose and adequate stepwise method")
             results = sm.OLS(Y[i], sm.add_constant(X[included])).fit()
             params = results.params
             loadings.loc[i, params.index.tolist()] = params.T
@@ -727,7 +734,7 @@ def risk_factors(
         Indicate the method used for stepwise regression.
         The default is 'Forward'.
     criterion : str, optional
-        The default is 'pvalue'. Posible values of the criterion used to select
+        The default is 'pvalue'. Possible values of the criterion used to select
         the best features are:
 
         - 'pvalue': select the features based on p-values.
@@ -741,7 +748,7 @@ def risk_factors(
     n_components : int, float, None or str, optional
         if 1 < n_components (int), it represents the number of components that
         will be keep. if 0 < n_components < 1 (float), it represents the
-        percentage of variance that the is explained by the components keeped.
+        percentage of variance that the is explained by the components kept.
         See `PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_
         for more details. The default is 0.95.
     error : bool
@@ -759,7 +766,7 @@ def risk_factors(
     returns : DataFrame
         The returns based on a risk factor model.
     nav : DataFrame
-        The cumulated uncompound returns based on a risk factor model.
+        The cumulated uncompounded returns based on a risk factor model.
 
     Raises
     ------
@@ -808,9 +815,8 @@ def risk_factors(
     mu = pd.DataFrame(mu.T, columns=assets)
     cov = pd.DataFrame(S, index=assets, columns=assets)
     returns = pd.DataFrame(returns, index=dates, columns=assets)
-    nav = returns.cumsum()
 
-    return mu, cov, returns, nav
+    return mu, cov, returns
 
 
 def black_litterman(
@@ -869,7 +875,7 @@ def black_litterman(
     rf : scalar, optional
         Risk free rate. The default is 0.
     eq : bool, optional
-        Indicate if use equilibrum or historical excess returns.
+        Indicate if use equilibrium or historical excess returns.
         The default is True.
     method_mu : str, can be {'hist', 'ewma1' or 'ewma2'}
         The method used to estimate the expected returns.
@@ -880,7 +886,7 @@ def black_litterman(
         - 'ewma2': use ewma with adjust=False. For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
     method_cov : str, optional
         The method used to estimate the covariance matrix:
-        The default is 'hist'. Posible values are:
+        The default is 'hist'. Possible values are:
 
         - 'hist': use historical estimates.
         - 'ewma1': use ewma with adjust=True. For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
@@ -893,6 +899,8 @@ def black_litterman(
         - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`b-MLforAM`.
         - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`b-MLforAM`.
         - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`b-MLforAM`.
+        - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`b-Gerber2021`.
+        - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`b-Gerber2021`.
     **kwargs : dict
         Other variables related to the expected returns and covariance estimation.
 
@@ -1055,10 +1063,10 @@ def augmented_black_litterman(
     rf : scalar, optional
         Risk free rate. The default is 0.
     eq : bool, optional
-        Indicate if use equilibrum or historical excess returns.
+        Indicate if use equilibrium or historical excess returns.
         The default is True.
     const : bool, optional
-        Indicate if use equilibrum or historical excess returns.
+        Indicate if use equilibrium or historical excess returns.
         The default is True.
     method_mu : str, can be {'hist', 'ewma1' or 'ewma2'}
         The method used to estimate the expected returns.
@@ -1069,7 +1077,7 @@ def augmented_black_litterman(
         - 'ewma2': use ewma with adjust=False. For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
     method_cov : str, optional
         The method used to estimate the covariance matrix:
-        The default is 'hist'. Posible values are:
+        The default is 'hist'. Possible values are:
 
         - 'hist': use historical estimates.
         - 'ewma1': use ewma with adjust=True. For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
@@ -1082,6 +1090,8 @@ def augmented_black_litterman(
         - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`b-MLforAM`.
         - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`b-MLforAM`.
         - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`b-MLforAM`.
+        - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`b-Gerber2021`.
+        - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`b-Gerber2021`.
     **kwargs : dict
         Other variables related to the expected returns and covariance estimation.
 
@@ -1281,7 +1291,7 @@ def black_litterman_bayesian(
     rf : scalar, optional
         Risk free rate. The default is 0.
     eq : bool, optional
-        Indicate if use equilibrum or historical excess returns.
+        Indicate if use equilibrium or historical excess returns.
         The default is True.
     const : bool, optional
         Indicate if the loadings matrix has a constant.
@@ -1300,7 +1310,7 @@ def black_litterman_bayesian(
         - 'ewma2': use ewma with adjust=False, For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
     method_cov : str, optional
         The method used to estimate the covariance matrix:
-        The default is 'hist'. Posible values are:
+        The default is 'hist'. Possible values are:
 
         - 'hist': use historical estimates.
         - 'ewma1': use ewma with adjust=True. For more information see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window>`_.
@@ -1313,6 +1323,8 @@ def black_litterman_bayesian(
         - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`b-MLforAM`.
         - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`b-MLforAM`.
         - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`b-MLforAM`.
+        - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`b-Gerber2021`.
+        - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`b-Gerber2021`.
     **kwargs : dict
         Other variables related to the expected returns and covariance estimation.
 
@@ -1396,7 +1408,7 @@ def bootstrapping(X, kind="stationary", q=0.05, n_sim=3000, window=3, seed=0):
         Features matrix, where n_samples is the number of samples and
         n_features is the number of features.
     kind : str
-        The bootstrapping method. The default value is 'stationary'. Posible values are:
+        The bootstrapping method. The default value is 'stationary'. Possible values are:
 
         - 'stationary': stationary bootstrapping method, see `StationaryBootstrap <https://bashtage.github.io/arch/bootstrap/generated/arch.bootstrap.StationaryBootstrap.html#arch.bootstrap.StationaryBootstrap>`_ for more details.
         - 'circular': circular bootstrapping method, see `CircularBlockBootstrap <https://bashtage.github.io/arch/bootstrap/generated/arch.bootstrap.CircularBlockBootstrap.html#arch.bootstrap.CircularBlockBootstrap>`_ for more details.

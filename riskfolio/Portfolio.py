@@ -71,11 +71,11 @@ class Portfolio(object):
     allowTO : bool, optional
         Indicate if there is turnover constraints. The default is False.
     turnover : float, optional
-        The maximum limit of turnover deviatons. The default is 0.05.
+        The maximum limit of turnover deviations. The default is 0.05.
     allowTE : bool, optional
         Indicate if there is tracking error constraints.. The default is False.
     TE : float, optional
-        The maximum limit of tracking error deviatons. The default is 0.05.
+        The maximum limit of tracking error deviations. The default is 0.05.
     benchindex : DataFrame, optional
         A dataframe that containts the returns of an index. If kindbench is
         False the tracking error constraints are calculated respect to this
@@ -239,7 +239,6 @@ class Portfolio(object):
         self.mu_bl_fm = None
         self.cov_bl_fm = None
         self.returns_fm = None
-        self.nav_fm = None
         self.z_EVaR = None
         self.z_EDaR = None
 
@@ -283,11 +282,6 @@ class Portfolio(object):
             self._returns = value
         else:
             raise NameError("returns must be a DataFrame")
-
-    @property
-    def nav(self):
-        if self._returns is not None and isinstance(self._returns, pd.DataFrame):
-            return self._returns.cumsum()
 
     @property
     def assetslist(self):
@@ -411,7 +405,7 @@ class Portfolio(object):
         ----------
         method_mu : str, optional
             The method used to estimate the expected returns.
-            The default value is 'hist'. Posible values are:
+            The default value is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1'': use ewma with adjust=True, see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#exponentially-weighted-windows>`_ for more details.
@@ -419,7 +413,7 @@ class Portfolio(object):
 
         method_cov : str, optional
             The method used to estimate the covariance matrix:
-            The default is 'hist'. Posible values are:
+            The default is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1'': use ewma with adjust=True, see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#exponentially-weighted-windows>`_ for more details.
@@ -432,9 +426,10 @@ class Portfolio(object):
             - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`a-MLforAM`.
             - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`a-MLforAM`.
             - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`a-MLforAM`.
-
+            - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`a-Gerber2021`.
+            - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`a-Gerber2021`.
         **kwargs : dict
-            All aditional parameters of mean_vector and covar_matrix functions.
+            All additional parameters of mean_vector and covar_matrix functions.
 
         See Also
         --------
@@ -485,11 +480,11 @@ class Portfolio(object):
             Weights matrix, where n_assets is the number of assets.
             The default is None.
         eq: bool, optional
-            Indicates if use equilibrum or historical excess returns.
+            Indicates if use equilibrium or historical excess returns.
             The default is True.
         method_mu : str, optional
             The method used to estimate the expected returns.
-            The default value is 'hist'. Posible values are:
+            The default value is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1'': use ewma with adjust=True, see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#exponentially-weighted-windows>`_ for more details.
@@ -497,7 +492,7 @@ class Portfolio(object):
 
         method_cov : str, optional
             The method used to estimate the covariance matrix:
-            The default is 'hist'. Posible values are:
+            The default is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1'': use ewma with adjust=True, see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#exponentially-weighted-windows>`_ for more details.
@@ -510,7 +505,8 @@ class Portfolio(object):
             - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`a-MLforAM`.
             - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`a-MLforAM`.
             - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`a-MLforAM`.
-
+            - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`a-Gerber2021`.
+            - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`a-Gerber2021`.
         **kwargs : dict
             Other variables related to the covariance estimation.
 
@@ -574,7 +570,7 @@ class Portfolio(object):
         ----------
         method_mu : str, optional
             The method used to estimate the expected returns.
-            The default value is 'hist'. Posible values are:
+            The default value is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1'': use ewma with adjust=True, see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#exponentially-weighted-windows>`_ for more details.
@@ -582,7 +578,7 @@ class Portfolio(object):
 
         method_cov : str, optional
             The method used to estimate the covariance matrix:
-            The default is 'hist'. Posible values are:
+            The default is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1'': use ewma with adjust=True, see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#exponentially-weighted-windows>`_ for more details.
@@ -595,7 +591,8 @@ class Portfolio(object):
             - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`a-MLforAM`.
             - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`a-MLforAM`.
             - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`a-MLforAM`.
-
+            - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`a-Gerber2021`.
+            - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`a-Gerber2021`.
         dict_cov : dict
             Other variables related to the covariance estimation.
         dict_risk : dict
@@ -628,14 +625,13 @@ class Portfolio(object):
             except:
                 print("You must convert self.cov to a positive definite matrix")
 
-        mu, cov, returns, nav = pe.risk_factors(
+        mu, cov, returns = pe.risk_factors(
             X, Y, B=B, method_mu=method_mu, method_cov=method_cov, **dict_risk
         )
 
         self.mu_fm = mu
         self.cov_fm = cov
         self.returns_fm = returns
-        self.nav_fm = nav
 
         value = af.is_pos_def(self.cov_fm, threshold=1e-8)
         if value == False:
@@ -693,7 +689,7 @@ class Portfolio(object):
             Weights matrix, where n_assets is the number of assets.
             The default is None.
         eq: bool, optional
-            Indicates if use equilibrum or historical excess returns.
+            Indicates if use equilibrium or historical excess returns.
             The default is True.
         const : bool, optional
             Indicate if the loadings matrix has a constant.
@@ -705,7 +701,7 @@ class Portfolio(object):
             The default is False.
         method_mu : str, optional
             The method used to estimate the expected returns.
-            The default value is 'hist'. Posible values are:
+            The default value is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1'': use ewma with adjust=True, see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#exponentially-weighted-windows>`_ for more details.
@@ -713,7 +709,7 @@ class Portfolio(object):
 
         method_cov : str, optional
             The method used to estimate the covariance matrix:
-            The default is 'hist'. Posible values are:
+            The default is 'hist'. Possible values are:
 
             - 'hist': use historical estimates.
             - 'ewma1'': use ewma with adjust=True, see `EWM <https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#exponentially-weighted-windows>`_ for more details.
@@ -726,7 +722,8 @@ class Portfolio(object):
             - 'fixed': denoise using fixed method. For more information see chapter 2 of :cite:`a-MLforAM`.
             - 'spectral': denoise using spectral method. For more information see chapter 2 of :cite:`a-MLforAM`.
             - 'shrink': denoise using shrink method. For more information see chapter 2 of :cite:`a-MLforAM`.
-
+            - 'gerber1': use the Gerber statistic 1. For more information see: :cite:`a-Gerber2021`.
+            - 'gerber2': use the Gerber statistic 2. For more information see: :cite:`a-Gerber2021`.
         kwargs_1 : dict
             Other variables related to the loadings matrix estimation.
         kwargs_2 : dict
@@ -866,7 +863,7 @@ class Portfolio(object):
         Parameters
         ----------
         box : string
-            The method used to estimate the box uncertainty sets. The default is 's'. Posible values are:
+            The method used to estimate the box uncertainty sets. The default is 's'. Possible values are:
 
             - 's': stationary bootstrapping method.
             - 'c': circular bootstrapping method.
@@ -875,7 +872,7 @@ class Portfolio(object):
             - 'd': delta method, this method increase and decrease by a percentage.
 
         ellip : string
-            The method used to estimate the elliptical uncertainty sets. The default is 's'. Posible values are:
+            The method used to estimate the elliptical uncertainty sets. The default is 's'. Possible values are:
 
             - 's': stationary bootstrapping method.
             - 'c': circular bootstrapping method.
@@ -934,15 +931,13 @@ class Portfolio(object):
             d_mu = (mu_u - mu_l) / 2
         elif box == "n":
             # Defining confidence level of mean vector assuming normal returns
-            mu_u = mu + st.norm.ppf(1 - q / 2) * np.diag(cov) / n**2
-            mu_l = mu - st.norm.ppf(1 - q / 2) * np.diag(cov) / n**2
-            d_mu = (mu_u - mu_l) / 2
+            d_mu = st.norm.ppf(1 - q / 2) * np.sqrt(np.diag(cov) / n)
             d_mu = pd.DataFrame(d_mu, index=[0], columns=cols)
 
             # Defining confidence level of covariance matrix assuming normal returns
             rs = np.random.RandomState(seed=seed)
             A = st.wishart.rvs(n, cov / n, size=10000, random_state=rs)
-            cov_l = np.percentile(A, q=q, axis=0)
+            cov_l = np.percentile(A, q=q / 2, axis=0)
             cov_u = np.percentile(A, q=1 - q / 2, axis=0)
 
             cov_l = pd.DataFrame(cov_l, index=cols, columns=cols)
@@ -1025,7 +1020,7 @@ class Portfolio(object):
         ----------
         model : str can be {'Classic', 'BL', 'FM' or 'BLFM'}
             The model used for optimize the portfolio.
-            The default is 'Classic'. Posible values are:
+            The default is 'Classic'. Possible values are:
 
             - 'Classic': use estimates of expected return vector and covariance matrix that depends on historical data.
             - 'BL': use estimates of expected return vector and covariance matrix based on the Black Litterman model.
@@ -1033,8 +1028,8 @@ class Portfolio(object):
             - 'BLFM': use estimates of expected return vector and covariance matrix based on Black Litterman applied to a Risk Factor model specified by the user.
             
         rm : str, optional
-            The risk measure used to optimze the portfolio.
-            The default is 'MV'. Posible values are:
+            The risk measure used to optimize the portfolio.
+            The default is 'MV'. Possible values are:
             
             - 'MV': Standard Deviation.
             - 'MAD': Mean Absolute Deviation.
@@ -1057,7 +1052,7 @@ class Portfolio(object):
             
         obj : str can be {'MinRisk', 'Utility', 'Sharpe' or 'MaxRet'}.
             Objective function of the optimization model.
-            The default is 'Sharpe'. Posible values are:
+            The default is 'Sharpe'. Possible values are:
 
             - 'MinRisk': Minimize the selected risk measure.
             - 'Utility': Maximize the Utility function :math:`\mu w - l \phi_{i}(w)`.
@@ -1065,7 +1060,7 @@ class Portfolio(object):
             - 'MaxRet': Maximize the expected return of the portfolio.
                 
         kelly : str, optional
-            Method used to calculate mean return. Posible values are False for
+            Method used to calculate mean return. Possible values are False for
             arithmetic mean return, "approx" for approximate mean logarithmic 
             return using first and second moment and "exact" for mean logarithmic
             return. The default is False.
@@ -1083,7 +1078,7 @@ class Portfolio(object):
             If model = 'FM', True means historical covariance and returns and
             False Risk Factor model for covariance and returns.
             If model = 'BL_FM', True means historical covariance and returns,
-            False Black Litteram with Risk Factor model for covariance and
+            False Black Litterman with Risk Factor model for covariance and
             Risk Factor model for returns, and '2' Risk Factor model for
             covariance and returns. The default is True.
 
@@ -1103,17 +1098,14 @@ class Portfolio(object):
             mu = np.array(self.mu, ndmin=2)
             sigma = np.array(self.cov, ndmin=2)
             returns = np.array(self.returns, ndmin=2)
-            nav = np.array(self.nav, ndmin=2)
         elif model == "FM":
             mu = np.array(self.mu_fm, ndmin=2)
             if hist == False:
                 sigma = np.array(self.cov_fm, ndmin=2)
                 returns = np.array(self.returns_fm, ndmin=2)
-                nav = np.array(self.nav_fm, ndmin=2)
             elif hist == True:
                 sigma = np.array(self.cov, ndmin=2)
                 returns = np.array(self.returns, ndmin=2)
-                nav = np.array(self.nav, ndmin=2)
         elif model == "BL":
             mu = np.array(self.mu_bl, ndmin=2)
             if hist == False:
@@ -1121,21 +1113,17 @@ class Portfolio(object):
             elif hist == True:
                 sigma = np.array(self.cov, ndmin=2)
             returns = np.array(self.returns, ndmin=2)
-            nav = np.array(self.nav, ndmin=2)
         elif model == "BL_FM":
             mu = np.array(self.mu_bl_fm, ndmin=2)
             if hist == False:
                 sigma = np.array(self.cov_bl_fm, ndmin=2)
                 returns = np.array(self.returns_fm, ndmin=2)
-                nav = np.array(self.nav_fm, ndmin=2)
             elif hist == True:
                 sigma = np.array(self.cov, ndmin=2)
                 returns = np.array(self.returns, ndmin=2)
-                nav = np.array(self.nav, ndmin=2)
             elif hist == 2:
                 sigma = np.array(self.cov_fm, ndmin=2)
                 returns = np.array(self.returns_fm, ndmin=2)
-                nav = np.array(self.nav_fm, ndmin=2)
 
         # General Model Variables
 
@@ -1222,42 +1210,38 @@ class Portfolio(object):
         # Drawdown Model Variables
 
         drawdown = False
-        if obj == "Sharpe":
-            X1 = k + nav @ w
-        else:
-            X1 = 1 + nav @ w
 
-        U = cv.Variable((nav.shape[0] + 1, 1))
-        ddconstraints = [U[1:] * 1000 >= X1 * 1000, U[1:] * 1000 >= U[:-1] * 1000]
+        U = cv.Variable((n + 1, 1))
+        ddconstraints = [U[1:] * 1000 >= U[:-1] * 1000 - X * 1000]
 
         if obj == "Sharpe":
-            ddconstraints += [U[1:] * 1000 >= k * 1000, U[0] * 1000 == k * 1000]
+            ddconstraints += [U[1:] * 1000 >= 0 * 1000, U[0] * 1000 == 0 * 1000]
         else:
-            ddconstraints += [U[1:] * 1000 >= 1 * 1000, U[0] * 1000 == 1 * 1000]
+            ddconstraints += [U[1:] * 1000 >= 0 * 1000, U[0] * 1000 == 0 * 1000]
 
         # Maximum Drawdown Model Variables
 
         MDD = cv.Variable((1, 1))
         risk8 = MDD
-        mddconstraints = [MDD >= U[1:] - X1]
+        mddconstraints = [MDD >= U[1:]]
 
         # Average Drawdown Model Variables
 
-        risk9 = 1 / n * cv.sum(U[1:] - X1)
+        risk9 = 1 / n * cv.sum(U[1:])
 
         # Conditional Drawdown Model Variables
 
-        CDaR = cv.Variable((1, 1))
-        Zd = cv.Variable((nav.shape[0], 1))
-        risk10 = CDaR + 1 / (alpha * n) * cv.sum(Zd)
+        DaR = cv.Variable((1, 1))
+        Zd = cv.Variable((n, 1))
+        risk10 = DaR + 1 / (alpha * n) * cv.sum(Zd)
         cdarconstraints = [
-            Zd * 1000 >= U[1:] * 1000 - X1 * 1000 - CDaR * 1000,
+            Zd * 1000 >= U[1:] * 1000 - DaR * 1000,
             Zd * 1000 >= 0,
         ]
 
         # Ulcer Index Model Variables
 
-        risk11 = cv.norm(U[1:] * 1000 - X1 * 1000, "fro") / np.sqrt(n)
+        risk11 = cv.norm(U[1:] * 1000, "fro") / np.sqrt(n)
 
         # Entropic Value at Risk Model Variables
 
@@ -1290,7 +1274,7 @@ class Portfolio(object):
             edarconstraints = [cv.sum(uj) * 1000 <= s2 * 1000]
             edarconstraints += [
                 cv.constraints.ExpCone(
-                    U[1:] * 1000 - X1 * 1000 - t2 * 1000,
+                    U[1:] * 1000 - t2 * 1000,
                     np.ones((n, 1)) @ s2 * 1000,
                     uj * 1000,
                 )
@@ -1298,7 +1282,7 @@ class Portfolio(object):
         else:
             edarconstraints = [cv.sum(uj) <= s2]
             edarconstraints += [
-                cv.constraints.ExpCone(U[1:] - X1 - t2, np.ones((n, 1)) @ s2, uj)
+                cv.constraints.ExpCone(U[1:] - t2, np.ones((n, 1)) @ s2, uj)
             ]
 
         # Gini Mean Difference Model Variables
@@ -1532,9 +1516,9 @@ class Portfolio(object):
 
         if self.uppermdd is not None:
             if obj == "Sharpe":
-                constraints += [U[1:] - X1 <= self.uppermdd * k]
+                constraints += [U[1:] <= self.uppermdd * k]
             else:
-                constraints += [U[1:] - X1 <= self.uppermdd]
+                constraints += [U[1:] <= self.uppermdd]
             constraints += mddconstraints
             drawdown = True
 
@@ -1816,14 +1800,14 @@ class Portfolio(object):
         ----------
         model : str can be 'Classic' or 'FM'
             The model used for optimize the portfolio.
-            The default is 'Classic'. Posible values are:
+            The default is 'Classic'. Possible values are:
 
             - 'Classic': use estimates of expected return vector and covariance matrix that depends on historical data.
             - 'FM': use estimates of expected return vector and covariance matrix based on a Risk Factor model specified by the user.
             
         rm : str, optional
-            The risk measure used to optimze the portfolio.
-            The default is 'MV'. Posible values are:
+            The risk measure used to optimize the portfolio.
+            The default is 'MV'. Possible values are:
             
             - 'MV': Standard Deviation.
             - 'MAD': Mean Absolute Deviation.
@@ -1870,17 +1854,14 @@ class Portfolio(object):
             mu = np.array(self.mu, ndmin=2)
             sigma = np.array(self.cov, ndmin=2)
             returns = np.array(self.returns, ndmin=2)
-            nav = np.array(self.nav, ndmin=2)
         elif model == "FM":
             mu = np.array(self.mu_fm, ndmin=2)
             if hist == False:
                 sigma = np.array(self.cov_fm, ndmin=2)
                 returns = np.array(self.returns_fm, ndmin=2)
-                nav = np.array(self.nav_fm, ndmin=2)
             elif hist == True:
                 sigma = np.array(self.cov, ndmin=2)
                 returns = np.array(self.returns, ndmin=2)
-                nav = np.array(self.nav, ndmin=2)
 
         # General Model Variables
 
@@ -1940,28 +1921,26 @@ class Portfolio(object):
 
         # Drawdown Model Variables
 
-        X1 = k + nav @ w
-        U = cv.Variable((nav.shape[0] + 1, 1))
+        U = cv.Variable((n + 1, 1))
         ddconstraints = [
-            U[1:] * 1000 >= X1 * 1000,
-            U[1:] * 1000 >= U[:-1] * 1000,
+            U[1:] * 1000 >= U[:-1] * 1000 - X * 1000,
             U[1:] * 1000 >= 1 * 1000 * k,
             U[0] * 1000 == 1 * 1000 * k,
         ]
 
         # Conditional Drawdown Model Variables
 
-        CDaR = cv.Variable((1, 1))
-        Zd = cv.Variable((nav.shape[0], 1))
-        risk10 = CDaR + 1 / (alpha * n) * cv.sum(Zd)
+        DaR = cv.Variable((1, 1))
+        Zd = cv.Variable((n, 1))
+        risk10 = DaR + 1 / (alpha * n) * cv.sum(Zd)
         cdarconstraints = [
-            Zd * 1000 >= U[1:] * 1000 - X1 * 1000 - CDaR * 1000,
+            Zd * 1000 >= U[1:] * 1000 - DaR * 1000,
             Zd * 1000 >= 0,
         ]
 
         # Ulcer Index Model Variables
 
-        risk11 = cv.norm(U[1:] - X1, "fro") / np.sqrt(n)
+        risk11 = cv.norm(U[1:], "fro") / np.sqrt(n)
 
         # Entropic Value at Risk Model Variables
 
@@ -1985,7 +1964,7 @@ class Portfolio(object):
         edarconstraints = [cv.sum(uj) * 1000 <= s2 * 1000]
         edarconstraints += [
             cv.constraints.ExpCone(
-                U[1:] * 1000 - X1 * 1000 - t2 * 1000,
+                U[1:] * 1000 - t2 * 1000,
                 np.ones((n, 1)) @ s2 * 1000,
                 uj * 1000,
             )
@@ -2203,14 +2182,14 @@ class Portfolio(object):
         ----------
         model : str can be 'Classic' or 'FM'
             The model used for optimize the portfolio.
-            The default is 'Classic'. Posible values are:
+            The default is 'Classic'. Possible values are:
 
             - 'Classic': use estimates of expected return vector and covariance matrix that depends on historical data.
             - 'FM': use estimates of expected return vector and covariance matrix based on a Risk Factor model specified by the user.
             
         version : str can be 'A', 'B' or 'C'
             Relaxed risk parity model version proposed in :cite:`a-RichardRoncalli`.
-            The default is 'A'. Posible values are:
+            The default is 'A'. Possible values are:
                 
             - 'A': without regularization and penalization constraints.
             - 'B': with regularization constraint but without penalization constraint.
@@ -2244,17 +2223,14 @@ class Portfolio(object):
             mu = np.array(self.mu, ndmin=2)
             sigma = np.array(self.cov, ndmin=2)
             returns = np.array(self.returns, ndmin=2)
-            nav = np.array(self.nav, ndmin=2)
         elif model == "FM":
             mu = np.array(self.mu_fm, ndmin=2)
             if hist == False:
                 sigma = np.array(self.cov_fm, ndmin=2)
                 returns = np.array(self.returns_fm, ndmin=2)
-                nav = np.array(self.nav_fm, ndmin=2)
             elif hist == True:
                 sigma = np.array(self.cov, ndmin=2)
                 returns = np.array(self.returns, ndmin=2)
-                nav = np.array(self.nav, ndmin=2)
 
         # General Model Variables
 
@@ -2386,7 +2362,7 @@ class Portfolio(object):
         ----------
         obj : str can be {'MinRisk', 'Utility', 'Sharpe' or 'MaxRet'}.
             Objective function of the optimization model.
-            The default is 'Sharpe'. Posible values are:
+            The default is 'Sharpe'. Possible values are:
 
             - 'MinRisk': Minimize the worst case formulation of the selected risk measure.
             - 'Utility': Maximize the worst case formulation of the Utility function :math:`\mu w - l \phi_{i}(w)`.
@@ -2401,7 +2377,7 @@ class Portfolio(object):
             The default is 2.
         Umu : str, optional
             The type of uncertainty set for the mean vector used in the model.
-            The default is 'box'. Posible values are:
+            The default is 'box'. Possible values are:
 
             - 'box': Use a box uncertainty set for the mean vector.
             - 'ellip': Use a elliptical uncertainty set for the mean vector.
@@ -2409,7 +2385,7 @@ class Portfolio(object):
 
         Ucov : str, optional
             The type of uncertainty set for the covariance matrix used in the model.
-            The default is 'box'. Posible values are:
+            The default is 'box'. Possible values are:
 
             - 'box': Use a box uncertainty set for the covariance matrix.
             - 'ellip': Use a elliptical uncertainty set for the covariance matrix.
@@ -2573,7 +2549,7 @@ class Portfolio(object):
         elif self.kindbench == False:
             bench = np.array(self.benchindex, ndmin=2)
 
-        # Problem aditional linear constraints
+        # Problem additional linear constraints
 
         if self.ainequality is not None and self.binequality is not None:
             A = np.array(self.ainequality, ndmin=2) * 1000
@@ -2683,7 +2659,7 @@ class Portfolio(object):
         ----------
         obj : str can be {'MinRisk', 'Utility', 'Sharpe' or 'MaxRet'}.
             Objective function of the optimization model.
-            The default is 'Sharpe'. Posible values are:
+            The default is 'Sharpe'. Possible values are:
 
             - 'MinRisk': Minimize the selected risk measure.
             - 'Utility': Maximize the Utility function :math:`\mu w - l \phi_{i}(w)`.
@@ -2691,9 +2667,9 @@ class Portfolio(object):
             
         owa_w : 1darray, optional
             The owa weight used to define the owa risk measure.
-            The default is 'MV'. Posible values are:
+            The default is 'MV'. Possible values are:
         kelly : str, optional
-            Method used to calculate mean return. Posible values are False for
+            Method used to calculate mean return. Possible values are False for
             arithmetic mean return, "approx" for approximate mean logarithmic 
             return using first and second moment and "exact" for mean logarithmic
             return. The default is False.
@@ -2955,8 +2931,8 @@ class Portfolio(object):
             Methodology used to estimate input parameters.
             The default is 'Classic'.
         rm : str, optional
-            The risk measure used to optimze the portfolio.
-            The default is 'MV'. Posible values are:
+            The risk measure used to optimize the portfolio.
+            The default is 'MV'. Possible values are:
 
             - 'MV': Standard Deviation.
             - 'MAD': Mean Absolute Deviation.
@@ -2978,7 +2954,7 @@ class Portfolio(object):
             - 'UCI': Ulcer Index of uncompounded cumulative returns.
 
         kelly : str, optional
-            Method used to calculate mean return. Posible values are False for
+            Method used to calculate mean return. Possible values are False for
             arithmetic mean return, "approx" for approximate mean logarithmic
             return using first and second moment and "exact" for mean logarithmic
             return. The default is False.
@@ -2992,7 +2968,7 @@ class Portfolio(object):
             If model = 'FM', True means historical covariance and returns and
             False Risk Factor model for covariance and returns.
             If model = 'BL_FM', True means historical covariance and returns,
-            False Black Litteram with Risk Factor model for covariance and
+            False Black Litterman with Risk Factor model for covariance and
             Risk Factor model for returns, and '2' Risk Factor model for
             covariance and returns. The default is True.
 
@@ -3036,8 +3012,8 @@ class Portfolio(object):
             Methodology used to estimate input parameters.
             The default is 'Classic'.
         rm : str, optional
-            The risk measure used to optimze the portfolio.
-            The default is 'MV'. Posible values are:
+            The risk measure used to optimize the portfolio.
+            The default is 'MV'. Possible values are:
 
             - 'MV': Standard Deviation.
             - 'MAD': Mean Absolute Deviation.
@@ -3059,7 +3035,7 @@ class Portfolio(object):
             - 'UCI': Ulcer Index of uncompounded cumulative returns.
 
         kelly : str, optional
-            Method used to calculate mean return. Posible values are False for
+            Method used to calculate mean return. Possible values are False for
             arithmetic mean return, "approx" for approximate mean logarithmic
             return using first and second moment and "exact" for mean logarithmic
             return. The default is False.
@@ -3076,7 +3052,7 @@ class Portfolio(object):
             If model = 'FM', True means historical covariance and returns and
             False Risk Factor model for covariance and returns.
             If model = 'BL_FM', True means historical covariance and returns,
-            False Black Litteram with Risk Factor model for covariance and
+            False Black Litterman with Risk Factor model for covariance and
             Risk Factor model for returns, and '2' Risk Factor model for
             covariance and returns. The default is True.
 
@@ -3100,17 +3076,14 @@ class Portfolio(object):
             mu = np.array(self.mu, ndmin=2)
             sigma = np.array(self.cov, ndmin=2)
             returns = np.array(self.returns, ndmin=2)
-            nav = np.array(self.nav, ndmin=2)
         elif model == "FM":
             mu = np.array(self.mu_fm, ndmin=2)
             if hist == False:
                 sigma = np.array(self.cov_fm, ndmin=2)
                 returns = np.array(self.returns_fm, ndmin=2)
-                nav = np.array(self.nav_fm, ndmin=2)
             elif hist == True:
                 sigma = np.array(self.cov, ndmin=2)
                 returns = np.array(self.returns, ndmin=2)
-                nav = np.array(self.nav, ndmin=2)
         elif model == "BL":
             mu = np.array(self.mu_bl, ndmin=2)
             if hist == False:
@@ -3118,21 +3091,17 @@ class Portfolio(object):
             elif hist == True:
                 sigma = np.array(self.cov, ndmin=2)
             returns = np.array(self.returns, ndmin=2)
-            nav = np.array(self.nav, ndmin=2)
         elif model == "BL_FM":
             mu = np.array(self.mu_bl_fm, ndmin=2)
             if hist == False:
                 sigma = np.array(self.cov_bl_fm, ndmin=2)
                 returns = np.array(self.returns_fm, ndmin=2)
-                nav = np.array(self.nav_fm, ndmin=2)
             elif hist == True:
                 sigma = np.array(self.cov, ndmin=2)
                 returns = np.array(self.returns, ndmin=2)
-                nav = np.array(self.nav, ndmin=2)
             elif hist == 2:
                 sigma = np.array(self.cov_fm, ndmin=2)
                 returns = np.array(self.returns_fm, ndmin=2)
-                nav = np.array(self.nav_fm, ndmin=2)
 
         alpha = self.alpha
         a_sim = self.a_sim
@@ -3350,7 +3319,6 @@ class Portfolio(object):
             "mu_bl_fm",
             "cov_bl_fm",
             "returns_fm",
-            "nav_fm",
             "cov_l",
             "cov_u",
             "cov_mu",
